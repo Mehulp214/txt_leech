@@ -1,35 +1,31 @@
-from pyrogram.errors.exceptions.bad_request_400 import StickerEmojiInvalid
+from pyrogram import Client, filters
+from pyrogram.types import Message
+from pyrogram.errors import FloodWait
+from aiohttp import ClientSession
+from subprocess import getstatusoutput
 import requests
 import json
 import subprocess
-from pyrogram import Client, filters
-from pyrogram.types.messages_and_media import message
-from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
-from pyrogram.errors import FloodWait
-from pyromod import listen
-from pyrogram.types import Message
-from pyrogram import Client, filters
-from p_bar import progress_bar
-from subprocess import getstatusoutput
-from aiohttp import ClientSession
-import helper
-from logger import logging
-import time
-import asyncio
-from pyrogram.types import User, Message
-import sys
 import re
 import os
+import time
+import asyncio
+import sys
+from helper import download, download_video, send_vid  # Ensure helper functions are correctly imported
+from p_bar import progress_bar
+from logger import logging
 
-bot = Client("bot",
-             bot_token= "7424760524:AAG-0er3b470bzc6je84PHUiNB4d45rvy4M",
-             api_id= 20778821,
-             api_hash= "70ddbf0162bafe8b7e0007c3b22d01c0")
+bot = Client(
+    "bot",
+    bot_token="7424760524:AAG-0er3b470bzc6je84PHUiNB4d45rvy4M",
+    api_id=20778821,
+    api_hash="70ddbf0162bafe8b7e0007c3b22d01c0"
+)
 
 
 @bot.on_message(filters.command(["start"]))
 async def account_login(bot: Client, m: Message):
-    editable = await m.reply_text(f"Hello [{m.from_user.first_name}](tg://user?id={m.from_user.id})\nPress /vastavik")
+    await m.reply_text(f"Hello [{m.from_user.first_name}](tg://user?id={m.from_user.id})\nPress /vastavik")
 
 
 @bot.on_message(filters.command("stop"))
@@ -38,33 +34,26 @@ async def restart_handler(_, m):
     os.execl(sys.executable, sys.executable, *sys.argv)
 
 
-
 @bot.on_message(filters.command(["vastavik"]))
 async def account_login(bot: Client, m: Message):
     editable = await m.reply_text('Send TXT file for download')
-    input: Message = await bot.listen(editable.chat.id)
-    x = await input.download()
-    await input.delete(True)
-
-
+    input_message: Message = await bot.listen(editable.chat.id)
+    x = await input_message.download()
+    await input_message.delete(True)
 
     path = f"./downloads/{m.chat.id}"
-
-    try:
-       with open(x, "r") as f:
-           content = f.read()
-       content = content.split("\n")
-       links = []
-       for i in content:
-           links.append(i.split("://", 1))
-       os.remove(x)
-            # print(len(links)
-    except:
-           await m.reply_text("Invalid file input.")
-           os.remove(x)
-           return
     
-   
+    try:
+        with open(x, "r") as f:
+            content = f.read()
+        content = content.split("\n")
+        links = [i.split("://", 1) for i in content]
+        os.remove(x)
+    except:
+        await m.reply_text("Invalid file input.")
+        os.remove(x)
+        return
+
     await editable.edit(f"Total links found are **{len(links)}**\n\nSend From where you want to download initial is **1**")
     input0: Message = await bot.listen(editable.chat.id)
     raw_text = input0.text
@@ -74,12 +63,12 @@ async def account_login(bot: Client, m: Message):
     input1: Message = await bot.listen(editable.chat.id)
     raw_text0 = input1.text
     await input1.delete(True)
-    
 
     await editable.edit("**Enter resolution**")
     input2: Message = await bot.listen(editable.chat.id)
     raw_text2 = input2.text
     await input2.delete(True)
+
     try:
         if raw_text2 == "144":
             res = "256x144"
@@ -92,48 +81,37 @@ async def account_login(bot: Client, m: Message):
         elif raw_text2 == "720":
             res = "1280x720"
         elif raw_text2 == "1080":
-            res = "1920x1080" 
-        else: 
+            res = "1920x1080"
+        else:
             res = "UN"
     except Exception:
-            res = "UN"
-    
-    
+        res = "UN"
 
     await editable.edit("**Enter A Highlighter Otherwise send 👉Co👈 **")
     input3: Message = await bot.listen(editable.chat.id)
     raw_text3 = input3.text
     await input3.delete(True)
-    highlighter  = f"️ ⁪⁬⁮⁮⁮"
-    if raw_text3 == 'Co':
-        MR = highlighter 
-    else:
-        MR = raw_text3
-   
-    await editable.edit("Now send the **Thumb url**\nEg : 
-https://telegra.ph/file/0633f8b6a6f110d34f044.jpg
-\n\nor Send no")
-    input6 = message = await bot.listen(editable.chat.id)
+    highlighter = "️ ⁪⁬⁮⁮⁮"
+    MR = highlighter if raw_text3 == 'Co' else raw_text3
+
+    await editable.edit("Now send the **Thumb url**\nEg: https://telegra.ph/file/0633f8b6a6f110d34f044.jpg\n\nor Send no")
+    input6: Message = await bot.listen(editable.chat.id)
     raw_text6 = input6.text
     await input6.delete(True)
     await editable.delete()
 
-    thumb = input6.text
+    thumb = raw_text6
     if thumb.startswith("http://") or thumb.startswith("https://"):
         getstatusoutput(f"wget '{thumb}' -O 'thumb.jpg'")
         thumb = "thumb.jpg"
     else:
-        thumb == "no"
+        thumb = "no"
 
-    if len(links) == 1:
-        count = 1
-    else:
-        count = int(raw_text)
+    count = 1 if len(links) == 1 else int(raw_text)
 
     try:
         for i in range(count - 1, len(links)):
-
-            V = links[i][1].replace("file/d/","uc?export=download&id=").replace("www.youtube-nocookie.com/embed", "youtu.be").replace("?modestbranding=1", "").replace("/view?usp=sharing","") # .replace("mpd","m3u8")
+            V = links[i][1].replace("file/d/", "uc?export=download&id=").replace("www.youtube-nocookie.com/embed", "youtu.be").replace("?modestbranding=1", "").replace("/view?usp=sharing", "")
             url = "https://" + V
 
             if "visionias" in url:
@@ -143,11 +121,11 @@ https://telegra.ph/file/0633f8b6a6f110d34f044.jpg
                         url = re.search(r"(https://.*?playlist.m3u8.*?)\"", text).group(1)
 
             elif 'videos.classplusapp' in url:
-             url = requests.get(f'https://api.classplusapp.com/cams/uploader/video/jw-signed-url?url={url}', headers={'x-access-token': 'eyJhbGciOiJIUzM4NCIsInR5cCI6IkpXVCJ9.eyJpZCI6ODg5NjE4NDMsIm9yZ0lkIjoyNTUxLCJ0eXBlIjoxLCJtb2JpbGUiOiI5MTY2NjMzMzY2NjU1OCIsIm5hbWUiOiJGZmZmZmZmIiwiZW1haWwiOiJsYWtlZm94NzA1QGxpZWJvZS5jb20iLCJpc0ZpcnN0TG9naW4iOnRydWUsImRlZmF1bHRMYW5ndWFnZSI6IkVOIiwiY291bnRyeUNvZGUiOiJJTiIsImlzSW50ZXJuYXRpb25hbCI6MCwiaXNEaXkiOmZhbHNlLCJsb2dpblZpYSI6Ik90cCIsImZpbmdlcnByaW50SWQiOiJiNjY3M2Y1YjQ2NmNiODZmZGFhZmJlZGZjNzRjZWYzNSIsImlhdCI6MTY4MTIzMjExNywiZXhwIjoxNjgxODM2OTE3fQ.r0klWJjEaA2jqpij_aSGXA7Mth2rd6LEsfRUhZT8a0byvsJd811FUiyH3TnIfTev'}).json()['url']
+                url = requests.get(f'https://api.classplusapp.com/cams/uploader/video/jw-signed-url?url={url}', headers={'x-access-token': 'eyJhbGciOiJIUzM4NCIsInR5cCI6IkpXVCJ9.eyJpZCI6ODg5NjE4NDMsIm9yZ0lkIjoyNTUxLCJ0eXBlIjoxLCJtb2JpbGUiOiI5MTY2NjMzMzY2NjU1OCIsIm5hbWUiOiJGZmZmZmZmIiwiZW1haWwiOiJsYWtlZm94NzA1QGxpZWJvZS5jb20iLCJpc0ZpcnN0TG9naW4iOnRydWUsImRlZmF1bHRMYW5ndWFnZSI6IkVOIiwiY291bnRyeUNvZGUiOiJJTiIsImlzSW50ZXJuYXRpb25hbCI6MCwiaXNEaXkiOmZhbHNlLCJsb2dpblZpYSI6Ik90cCIsImZpbmdlcnByaW50SWQiOiJiNjY3M2Y1YjQ2NmNiODZmZGFhZmJlZGZjNzRjZWYzNSIsImlhdCI6MTY4MTIzMjExNywiZXhwIjoxNjgxODM2OTE3fQ.r0klWJjEaA2jqpij_aSGXA7Mth2rd6LEsfRUhZT8a0byvsJd811FUiyH3TnIfTev'}).json()['url']
 
             elif '/master.mpd' in url:
-             id =  url.split("/")[-2]
-             url =  "https://d26g5bnklkwsh4.cloudfront.net/" + id + "/master.m3u8"
+                id = url.split("/")[-2]
+                url = "https://d26g5bnklkwsh4.cloudfront.net/" + id + "/master.m3u8"
 
             name1 = links[i][0].replace("\t", "").replace(":", "").replace("/", "").replace("+", "").replace("#", "").replace("|", "").replace("@", "").replace("*", "").replace(".", "").replace("https", "").replace("http", "").strip()
             name = f'{str(count).zfill(3)}) {name1[:60]}'
@@ -162,22 +140,21 @@ https://telegra.ph/file/0633f8b6a6f110d34f044.jpg
             else:
                 cmd = f'yt-dlp -f "{ytf}" "{url}" -o "{name}.mp4"'
 
-            try:  
-                
+            try:
                 cc = f'**Vid_id  »** {str(count).zfill(3)}\n**Title  »** {name1} {res} {MR}.mkv\n**Batch »** {raw_text0}\n\n'
                 cc1 = f'**Vid_id  »** {str(count).zfill(3)}\n**Title »** {name1} {MR}.pdf \n**Batch »** {raw_text0}\n\n'
                 if "drive" in url:
                     try:
-                        ka = await helper.download(url, name)
-                        copy = await bot.send_document(chat_id=m.chat.id,document=ka, caption=cc1)
-                        count+=1
+                        ka = await download(url, name)
+                        copy = await bot.send_document(chat_id=m.chat.id, document=ka, caption=cc1)
+                        count += 1
                         os.remove(ka)
                         time.sleep(1)
                     except FloodWait as e:
                         await m.reply_text(str(e))
                         time.sleep(e.x)
                         continue
-                
+
                 elif ".pdf" in url:
                     try:
                         cmd = f'yt-dlp -o "{name}.pdf" "{url}"'
@@ -193,10 +170,10 @@ https://telegra.ph/file/0633f8b6a6f110d34f044.jpg
                 else:
                     Show = f"**Downloading:-**\n\n**Name :-** {name}\nQuality - {raw_text2}\n\n**Url :-** {url}"
                     prog = await m.reply_text(Show)
-                    res_file = await helper.download_video(url, cmd, name)
+                    res_file = await download_video(url, cmd, name)
                     filename = res_file
                     await prog.delete(True)
-                    await helper.send_vid(bot, m, cc, filename, thumb, name, prog)
+                    await send_vid(bot, m, cc, filename, thumb, name, prog)
                     count += 1
                     time.sleep(1)
 
@@ -208,6 +185,7 @@ https://telegra.ph/file/0633f8b6a6f110d34f044.jpg
 
     except Exception as e:
         await m.reply_text(e)
+
     await m.reply_text("Done")
 
 
